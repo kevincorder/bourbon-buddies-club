@@ -16,8 +16,10 @@ const safeUrl = value => { try { const url = new URL(value); return url.protocol
 let submittedReviews = [];
 let submittedThemes = [];
 let scheduleNotes = [];
+let firestoreSchedule = [];
 let firestoreDatabase = null;
 let signedInUser = null;
+let signedInAdmin = false;
 
 function allReviews() { return submittedReviews.length ? submittedReviews : club.bottles; }
 
@@ -75,10 +77,10 @@ function renderThemeIdeas() {
 }
 
 function renderClubContent() {
-  const schedule = [...club.schedule].sort((a,b) => asDate(a.date)-asDate(b.date));
+  const schedule = [...(firestoreSchedule.length ? firestoreSchedule : club.schedule)].sort((a,b) => asDate(a.date)-asDate(b.date));
   const next = schedule.find(event => asDate(event.date) >= new Date()) || schedule.at(-1);
   if ($('#next-date')) { $('#next-date').textContent=dateFormat.format(asDate(next.date)); $('#next-theme').textContent=next.theme; $('#next-location').textContent=next.location; }
-  if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => { const note = scheduleNotes.find(item => String(item.theme || '').trim() === String(event.theme || '').trim() && hasPrivateDate(item.date) && privateDate(item.date).toISOString().slice(0,10) === event.date); const noteUrl = safeUrl(note?.url); return `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small><b>Location:</b> ${escapeHtml(event.location)}</small></div><div class="schedule-details"><p><b>Tasting Selection:</b> ${escapeHtml(event.selection)}</p><p><b>Most Popular:</b> ${escapeHtml(event.popular || 'Not recorded')}</p>${noteUrl ? `<p><a class="tasting-notes-link" href="${escapeHtml(noteUrl)}" target="_blank" rel="noopener noreferrer">Open tasting notes →</a></p>` : `<p><b>Notes:</b> ${escapeHtml(event.notes || '—')}</p>`}</div></article>`; }).join('');
+  if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => { const note = scheduleNotes.find(item => String(item.theme || '').trim() === String(event.theme || '').trim() && hasPrivateDate(item.date) && privateDate(item.date).toISOString().slice(0,10) === event.date); const noteUrl = safeUrl(event.tastingNotesUrl || note?.url); return `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small><b>Location:</b> ${escapeHtml(event.location)}</small></div><div class="schedule-details"><p><b>Tasting Selection:</b> ${escapeHtml(event.selection)}</p><p><b>Most Popular:</b> ${escapeHtml(event.popular || 'Not recorded')}</p>${noteUrl ? `<p><a class="tasting-notes-link" href="${escapeHtml(noteUrl)}" target="_blank" rel="noopener noreferrer">Open tasting notes →</a></p>` : `<p><b>Notes:</b> ${escapeHtml(event.notes || '—')}</p>`}</div></article>`; }).join('');
   renderThemeIdeas();
   if ($('#rule-list')) $('#rule-list').innerHTML = club.rules.map(rule => `<li>${escapeHtml(rule)}</li>`).join('');
   if ($('#bottle-search')) $('#bottle-search').oninput = renderBottleList;
@@ -96,7 +98,7 @@ function renderReviewers(people) {
   select.innerHTML = '<option value="">Choose your name</option>' + people.map(person => `<option value="${escapeHtml(person.name)}">${escapeHtml(person.name)}</option>`).join('');
 }
 
-function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot, scheduleSnapshot) {
+function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot, scheduleSnapshot, tastingSnapshot) {
   const people = directory ? directory.docs.map(item => item.data()).sort((a,b) => String(a.name).localeCompare(String(b.name))) : [];
   if ($('#directory-list')) $('#directory-list').innerHTML = people.length ? people.map(person => `<article class="member-card"><strong>${escapeHtml(person.name)}</strong><p>${escapeHtml(person.title)}</p>${person.onlyDramsUsername ? `<p><b>OnlyDrams:</b> ${escapeHtml(person.onlyDramsUsername)}</p>` : ''}<p>${escapeHtml(person.phone)}<br><a href="mailto:${escapeHtml(person.email)}">${escapeHtml(person.email)}</a></p></article>`).join('') : '<p class="loading">No directory entries yet.</p>';
   renderReviewers(people);
@@ -110,6 +112,10 @@ function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot
     renderThemeIdeas();
   }
   if (scheduleSnapshot) { scheduleNotes = scheduleSnapshot.docs.map(item => item.data()); renderClubContent(); }
+  if (tastingSnapshot) {
+    firestoreSchedule = tastingSnapshot.docs.map(item => { const tasting = item.data(); return {...tasting, date:hasPrivateDate(tasting.date) ? privateDate(tasting.date).toISOString().slice(0,10) : tasting.date}; });
+    renderClubContent();
+  }
 }
 
 async function loadPrivateData() {
@@ -118,16 +124,18 @@ async function loadPrivateData() {
   const needReviews = Boolean($('#bottle-list'));
   const needThemes = Boolean($('#idea-list'));
   const needScheduleNotes = Boolean($('#schedule-list'));
-  if (!needDirectory && !needNewsletters && !needReviews && !needThemes && !needScheduleNotes) return;
+  const needTastings = Boolean($('#next-date') || $('#schedule-list'));
+  if (!needDirectory && !needNewsletters && !needReviews && !needThemes && !needScheduleNotes && !needTastings) return;
   try {
-    const [directory, newsletters, reviews, themes, notes] = await Promise.all([
+    const [directory, newsletters, reviews, themes, notes, tastings] = await Promise.all([
       needDirectory ? getDocs(collection(firestoreDatabase,'privateDirectory')) : Promise.resolve(null),
       needNewsletters ? getDocs(collection(firestoreDatabase,'newsletters')) : Promise.resolve(null),
       needReviews ? getDocs(collection(firestoreDatabase,'bottleReviews')) : Promise.resolve(null),
       needThemes ? getDocs(collection(firestoreDatabase,'themeIdeas')) : Promise.resolve(null),
       needScheduleNotes ? getDocs(collection(firestoreDatabase,'scheduleNotes')) : Promise.resolve(null),
+      needTastings ? getDocs(collection(firestoreDatabase,'tastings')) : Promise.resolve(null),
     ]);
-    renderPrivateData(directory, newsletters, reviews, themes, notes);
+    renderPrivateData(directory, newsletters, reviews, themes, notes, tastings);
   } catch (error) {
     console.error('Private Firestore load failed:', error);
     const code = escapeHtml(error?.code || 'unknown-error'); const detail = escapeHtml(error?.message || 'No diagnostic message returned.');
@@ -136,6 +144,20 @@ async function loadPrivateData() {
     if ($('#review-message')) $('#review-message').textContent = 'Reviews are unavailable until the Firestore rules for bottleReviews are published.';
     if ($('#theme-message')) $('#theme-message').textContent = 'Theme ideas are unavailable until the Firestore rules for themeIdeas are published.';
   }
+}
+
+async function submitTasting(event) {
+  event.preventDefault();
+  if (!firestoreDatabase || !signedInAdmin) return;
+  const form = event.currentTarget; const button = form.querySelector('button[type="submit"]'); const message = $('#tasting-message');
+  const date = asDate($('#tasting-date').value); const tastingNotesUrl = $('#tasting-notes-url').value.trim();
+  if (Number.isNaN(date.getTime()) || (tastingNotesUrl && !safeUrl(tastingNotesUrl))) { message.textContent = 'Enter a valid date and, if included, an HTTPS tasting-notes link.'; return; }
+  button.disabled = true; message.textContent = 'Adding meeting to the calendar…';
+  try {
+    await addDoc(collection(firestoreDatabase,'tastings'), { date:Timestamp.fromDate(date), location:$('#tasting-location').value.trim(), theme:$('#tasting-theme').value.trim(), selection:$('#tasting-selection').value.trim(), popular:$('#tasting-popular').value.trim(), notes:$('#tasting-notes').value.trim(), tastingNotesUrl, createdAt:Timestamp.now(), authorUid:signedInUser.uid });
+    form.reset(); message.textContent = 'Meeting added to the calendar.'; await loadPrivateData();
+  } catch (error) { message.textContent = error?.code === 'permission-denied' ? 'Firestore denied this change. Confirm this account has the admin role.' : 'Could not add the meeting. Try again.'; }
+  finally { button.disabled = false; }
 }
 
 async function submitTheme(event) {
@@ -171,15 +193,16 @@ if (!configured) {
 } else {
   const app = initializeApp(firebaseConfig); const auth = getAuth(app); firestoreDatabase = getFirestore(app);
   onAuthStateChanged(auth, async user => {
-    if (!user) { signedInUser=null; $('#login-view').hidden=false; $('#club-view').hidden=true; return; }
+    if (!user) { signedInUser=null; signedInAdmin=false; $('#login-view').hidden=false; $('#club-view').hidden=true; return; }
     try {
       const membership = await getDoc(doc(firestoreDatabase,'members',user.uid));
       if (!membership.exists() || membership.data().active !== true) { $('#login-message').textContent='This account has not been invited to the club site.'; await signOut(auth); return; }
-      signedInUser=user; $('#login-view').hidden=true; $('#club-view').hidden=false; renderClubContent(); await loadPrivateData();
+      signedInUser=user; signedInAdmin=membership.data().role === 'admin'; $('#login-view').hidden=true; $('#club-view').hidden=false; if ($('#tasting-admin')) $('#tasting-admin').hidden=!signedInAdmin; renderClubContent(); await loadPrivateData();
     } catch { $('#login-message').textContent='We could not verify club access. Ask the club admin to check your invitation.'; await signOut(auth); }
   });
   $('#login-form').addEventListener('submit', async event => { event.preventDefault(); $('#login-message').textContent=''; try { await signInWithEmailAndPassword(auth, $('#email').value, $('#password').value); } catch { $('#login-message').textContent = 'That email/password combination did not work. Try again or ask the club admin.'; } });
   if ($('#review-form')) $('#review-form').addEventListener('submit', submitReview);
   if ($('#theme-form')) $('#theme-form').addEventListener('submit', submitTheme);
+  if ($('#tasting-form')) $('#tasting-form').addEventListener('submit', submitTasting);
   $('#sign-out').addEventListener('click', () => signOut(auth));
 }

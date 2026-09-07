@@ -52,6 +52,7 @@ The site now loads the directory, ledger, and newsletters from Firestore only af
 | `bottleReviews` | Auto-created by the website | `bottle`, `reviewer`, `dateReviewed`, `nose`, `palate`, `score`, `overall`, `authorUid` |
 | `themeIdeas` | Imported from the workbook and auto-created by the website | `theme`, `lastUsed` (optional Timestamp), `used` (boolean), `authorUid`, `createdAt` |
 | `scheduleNotes` | Imported from the workbook | `date` (Timestamp), `theme`, `title`, `url` (HTTPS URL) |
+| `tastings` | Imported from the workbook and administered on the Calendar page | `date` (Timestamp), `location`, `theme`, `selection`, `popular`, `notes`, `tastingNotesUrl` (optional HTTPS URL) |
 
 Create each user yourself in Firebase Authentication. Copy their UID and create `members/UID` with `active: true`. An authenticated account without that document is immediately signed out by the site; Firestore rules must enforce the same restriction.
 
@@ -117,6 +118,10 @@ service cloud.firestore {
       allow read: if member();
       allow write: if admin();
     }
+    match /tastings/{tastingId} {
+      allow read: if member();
+      allow write: if admin();
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }
@@ -134,11 +139,11 @@ The Theme Ideas page reads `themeIdeas` from Firestore after sign-in. The one-ti
 
 ## Schedule tasting-note links
 
-The calendar displays an **Open tasting notes** link when the imported Schedule row has one. The link is fetched from Firestore only after sign-in. Keep the linked Google Docs shared only with intended club members; Google Drive sharing controls access to the notes themselves.
+The calendar reads `tastings` from Firestore after sign-in. Club admins see an **Add a meeting** form on the Calendar page; members see the calendar but cannot change it. Each tasting can include an **Open tasting notes** link. Keep linked Google Docs shared only with intended club members; Google Drive sharing controls access to the notes themselves.
 
 ## One-time XLSX import
 
-`tools/import_private_xlsx.py` maps the original workbook into `privateDirectory`, `accounting`, `newsletters`, `bottleReviews`, `themeIdeas`, and `scheduleNotes`. It does not create Firebase Authentication users or `members` invitation records, because those require the Firebase UID for each person.
+`tools/import_private_xlsx.py` maps the original workbook into `privateDirectory`, `accounting`, `newsletters`, `bottleReviews`, `themeIdeas`, `scheduleNotes`, and `tastings`. It does not create Firebase Authentication users or `members` invitation records, because those require the Firebase UID for each person.
 
 1. In Firebase Console, open **Project settings → Service accounts → Firebase Admin SDK** and generate a new private key. Save it outside this repository, for example in your Downloads folder. This file provides administrator access to your Firebase project; never email it, commit it, or upload it.
 2. Open PowerShell in the project folder and install the two local Python packages:
