@@ -47,7 +47,19 @@
         </section>
 
         <section id="bottles" class="content-section split-section">
-          <div class="section-heading"><p class="eyebrow">The evidence</p><h2>Bottle notes</h2><p>Search the cabinet before you buy the same bottle twice.</p></div>
+          <div class="section-heading"><p class="eyebrow">The evidence</p><h2>Bottle notes</h2><p>Search the cabinet before you buy the same bottle twice. Add your own honest, scientifically questionable opinion below.</p>
+            <form id="review-form" class="review-form">
+              <label>Bottle<input id="review-bottle" name="bottle" maxlength="120" required /></label>
+              <label>Reviewed by<select id="reviewer" name="reviewer" required><option value="">Loading members…</option></select></label>
+              <label>Date reviewed<input id="review-date" name="dateReviewed" type="date" required /></label>
+              <label>Nose<textarea id="review-nose" name="nose" maxlength="600" required></textarea></label>
+              <label>Palate<textarea id="review-palate" name="palate" maxlength="600" required></textarea></label>
+              <label>Score out of 100<input id="review-score" name="score" type="number" min="0" max="100" step="1" required /></label>
+              <label>Overall<textarea id="review-overall" name="overall" maxlength="900" required></textarea></label>
+              <button type="submit">Add tasting note</button>
+              <p id="review-message" class="form-message" aria-live="polite"></p>
+            </form>
+          </div>
           <div><input id="bottle-search" class="search" type="search" placeholder="Search bottles or tasting notes" aria-label="Search bottle notes" /><div id="bottle-list" class="bottle-list"></div></div>
         </section>
 

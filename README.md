@@ -49,6 +49,7 @@ The site now loads the directory, ledger, and newsletters from Firestore only af
 | `privateDirectory` | Any unique ID | `name`, `title`, `phone`, `email` |
 | `accounting` | Any unique ID | `date` (Firestore Timestamp), `description`, `status`, `member`, `amount` (number), `notes` |
 | `newsletters` | Any unique ID | `date` (Firestore Timestamp), `title`, `url` (HTTPS URL) |
+| `bottleReviews` | Auto-created by the website | `bottle`, `reviewer`, `dateReviewed`, `nose`, `palate`, `score`, `overall`, `authorUid` |
 
 Create each user yourself in Firebase Authentication. Copy their UID and create `members/UID` with `active: true`. An authenticated account without that document is immediately signed out by the site; Firestore rules must enforce the same restriction.
 
@@ -83,6 +84,22 @@ service cloud.firestore {
       allow read: if member();
       allow write: if admin();
     }
+    match /bottleReviews/{reviewId} {
+      allow read: if member();
+      allow create: if member()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.bottle is string
+        && request.resource.data.reviewer is string
+        && request.resource.data.dateReviewed is timestamp
+        && request.resource.data.nose is string
+        && request.resource.data.palate is string
+        && request.resource.data.overall is string
+        && request.resource.data.score is number
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 100;
+      allow update, delete: if admin() ||
+        (member() && resource.data.authorUid == request.auth.uid);
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }
@@ -90,9 +107,13 @@ service cloud.firestore {
 
 The Firebase Console bypasses those rules, so use it to create the first administrator membership record and import the current spreadsheet data. Test with a member account and an uninvited account before sharing the site address.
 
+## Member bottle reviews
+
+Signed-in members can add a Bottle Note from the website. The reviewer selector is populated from `privateDirectory`; submitted reviews are saved to `bottleReviews` and appear in the existing search results. Publish the updated Firestore rules above before using the form. Members can add reviews and manage only reviews they created; admins can manage every review.
+
 ## One-time XLSX import
 
-`tools/import_private_xlsx.py` maps the original workbook into `privateDirectory`, `accounting`, and `newsletters`. It does not create Firebase Authentication users or `members` invitation records, because those require the Firebase UID for each person.
+`tools/import_private_xlsx.py` maps the original workbook into `privateDirectory`, `accounting`, `newsletters`, and `bottleReviews`. It does not create Firebase Authentication users or `members` invitation records, because those require the Firebase UID for each person.
 
 1. In Firebase Console, open **Project settings → Service accounts → Firebase Admin SDK** and generate a new private key. Save it outside this repository, for example in your Downloads folder. This file provides administrator access to your Firebase project; never email it, commit it, or upload it.
 2. Open PowerShell in the project folder and install the two local Python packages:

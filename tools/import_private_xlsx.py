@@ -92,6 +92,41 @@ def newsletter_documents(sheet):
     return documents
 
 
+def bottle_review_documents(sheet):
+    fields = field_map(sheet)
+    documents = []
+    for source_row, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+        bottle = value(row, fields, "Bottle (Jack Daniels Single Barell Rye)")
+        score = value(row, fields, "Score out of 100")
+        if not bottle or score is None:
+            continue
+        setting = value(row, fields, "Setting (At home, blind in a Glencairn)")
+        color = value(row, fields, "Color")
+        rating = value(row, fields, "Score Rating System")
+        overall_parts = []
+        if setting:
+            overall_parts.append(f"Setting: {setting}")
+        if color:
+            overall_parts.append(f"Color: {color}")
+        if rating:
+            overall_parts.append(f"Original rating note: {rating}")
+        documents.append((
+            f"original-sheet-row-{source_row}",
+            {
+                "bottle": bottle,
+                "reviewer": value(row, fields, "Reviewed by") or "Original club review",
+                "dateReviewed": utc_datetime(value(row, fields, "Date Reviewed")),
+                "nose": value(row, fields, "Smelling Notes") or "",
+                "palate": value(row, fields, "Tasting Notes") or "",
+                "score": float(score),
+                "overall": " ".join(overall_parts) or "Imported from the original club workbook.",
+                "authorUid": "imported-from-original-xlsx",
+                "createdAt": utc_datetime(value(row, fields, "Date Reviewed")) or datetime.now(timezone.utc),
+            },
+        ))
+    return documents
+
+
 def remove_nones(document):
     return {key: value for key, value in document.items() if value is not None}
 
@@ -111,7 +146,7 @@ def main():
         sys.exit(f"Service-account key not found: {args.service_account}")
 
     workbook = load_workbook(args.workbook, data_only=True)
-    required = ("Members", "Accounting", "Newsletters")
+    required = ("Members", "Accounting", "Newsletters", "Bottle Notes")
     missing = [name for name in required if name not in workbook.sheetnames]
     if missing:
         sys.exit(f"Workbook is missing required sheets: {', '.join(missing)}")
@@ -120,6 +155,7 @@ def main():
         "privateDirectory": directory_documents(workbook["Members"]),
         "accounting": accounting_documents(workbook["Accounting"]),
         "newsletters": newsletter_documents(workbook["Newsletters"]),
+        "bottleReviews": bottle_review_documents(workbook["Bottle Notes"]),
     }
     print("Import summary (no private values printed):")
     for name, documents in collections.items():
