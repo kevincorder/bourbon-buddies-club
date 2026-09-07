@@ -41,8 +41,10 @@
           <aside class="next-pour"><p class="eyebrow">Next meeting</p><p id="next-date" class="date">—</p><h2 id="next-theme">—</h2><p id="next-location">—</p></aside>
         </section>
 
-        <section id="bottles" class="content-section split-section">
-          <div class="section-heading"><p class="eyebrow">The evidence</p><h2>Bottle notes</h2><p>Search the cabinet before you buy the same bottle twice. Add your own honest, scientifically questionable opinion below.</p>
+        <section id="bottles" class="content-section">
+          <div class="section-heading"><p class="eyebrow">The evidence</p><h2>Bottle notes</h2><p>Search the cabinet before you buy the same bottle twice. Add your own honest, scientifically questionable opinion below.</p></div>
+          <section class="review-dashboard" aria-labelledby="top-shelf-title"><div class="dashboard-heading"><div><p class="eyebrow">The standings</p><h3 id="top-shelf-title">Top shelf</h3></div><p>Highest club averages, because somebody has to keep score.</p></div><div id="leaderboard-list" class="leaderboard-list"><p class="loading">Loading the standings…</p></div></section>
+          <div class="bottle-workspace"><div><h3>Add a tasting note</h3>
             <form id="review-form" class="review-form">
               <label>Bottle<input id="review-bottle" name="bottle" maxlength="120" required /></label>
               <label>Reviewed by<select id="reviewer" name="reviewer" required><option value="">Loading members…</option></select></label>
@@ -55,7 +57,7 @@
               <p id="review-message" class="form-message" aria-live="polite"></p>
             </form>
           </div>
-          <div><input id="bottle-search" class="search" type="search" placeholder="Search bottles or tasting notes" aria-label="Search bottle notes" /><div id="bottle-list" class="bottle-list"></div></div>
+          <div><div class="review-controls"><label>Search<input id="bottle-search" type="search" placeholder="Bottles or tasting notes" aria-label="Search bottle notes" /></label><label>Reviewer<select id="bottle-reviewer" aria-label="Filter by reviewer"><option value="">All reviewers</option></select></label><label>Sort<select id="bottle-sort" aria-label="Sort bottle notes"><option value="newest">Newest first</option><option value="score">Highest score</option><option value="bottle">Bottle A–Z</option></select></label></div><div id="bottle-list" class="bottle-list"></div></div></div>
         </section>
 
         <footer><p>Drink thoughtfully. Hydrate aggressively. Never trust a label that says “ultra smooth.”</p><div class="footer-links"><a href="https://www.facebook.com/groups/428634636990006/" target="_blank" rel="noopener noreferrer">Facebook Group</a><a href="https://www.instagram.com/bourbon_buddies_club/" target="_blank" rel="noopener noreferrer">Instagram</a><a href="mailto:BourbonBuddiesClub@gmail.com">BourbonBuddiesClub@gmail.com</a></div></footer>

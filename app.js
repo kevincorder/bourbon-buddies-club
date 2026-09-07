@@ -19,12 +19,43 @@ let scheduleNotes = [];
 let firestoreDatabase = null;
 let signedInUser = null;
 
-function renderBottleList(search = '') {
+function allReviews() { return submittedReviews.length ? submittedReviews : club.bottles; }
+
+function renderLeaderboard() {
+  const list = $('#leaderboard-list');
+  if (!list) return;
+  const grouped = new Map();
+  allReviews().forEach(review => {
+    const bottle = String(review.bottle || '').trim(); const score = Number(review.score);
+    if (!bottle || !Number.isFinite(score)) return;
+    const key = bottle.toLowerCase(); const entry = grouped.get(key) || { bottle, scores:[] };
+    entry.scores.push(score); grouped.set(key, entry);
+  });
+  const leaders = [...grouped.values()].map(entry => ({ ...entry, average:entry.scores.reduce((total, score) => total + score, 0) / entry.scores.length })).sort((a,b) => b.average - a.average || b.scores.length - a.scores.length || a.bottle.localeCompare(b.bottle)).slice(0,3);
+  list.innerHTML = leaders.map((entry, index) => `<article class="leader-card"><span class="leader-rank">#${index + 1}</span><div><strong>${escapeHtml(entry.bottle)}</strong><p>${entry.scores.length} ${entry.scores.length === 1 ? 'review' : 'reviews'} · club average</p></div><span class="leader-score">${entry.average.toFixed(0)}</span></article>`).join('') || '<p class="loading">No scored reviews yet.</p>';
+}
+
+function renderBottleFilters() {
+  const select = $('#bottle-reviewer');
+  if (!select) return;
+  const current = select.value;
+  const reviewers = [...new Set(allReviews().map(review => String(review.reviewer || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+  select.innerHTML = '<option value="">All reviewers</option>' + reviewers.map(reviewer => `<option value="${escapeHtml(reviewer)}">${escapeHtml(reviewer)}</option>`).join('');
+  select.value = reviewers.includes(current) ? current : '';
+}
+
+function renderBottleList() {
   const list = $('#bottle-list');
   if (!list) return;
-  const q = search.toLowerCase();
-  const allReviews = submittedReviews.length ? submittedReviews : club.bottles;
-  const matches = allReviews.filter(review => Object.values(review).join(' ').toLowerCase().includes(q));
+  const q = $('#bottle-search')?.value.toLowerCase() || '';
+  const reviewer = $('#bottle-reviewer')?.value || '';
+  const sort = $('#bottle-sort')?.value || 'newest';
+  const matches = allReviews().filter(review => Object.values(review).join(' ').toLowerCase().includes(q) && (!reviewer || review.reviewer === reviewer));
+  matches.sort((a,b) => {
+    if (sort === 'score') return Number(b.score) - Number(a.score) || String(a.bottle).localeCompare(String(b.bottle));
+    if (sort === 'bottle') return String(a.bottle).localeCompare(String(b.bottle));
+    return privateDate(b.dateReviewed).getTime() - privateDate(a.dateReviewed).getTime();
+  });
   list.innerHTML = matches.map(review => `<article class="bottle-card"><header><div><strong>${escapeHtml(review.bottle)}</strong><p>Reviewed by ${escapeHtml(review.reviewer)}</p></div><span class="score">${escapeHtml(review.score)}</span></header>${review.dateReviewed ? `<p><b>Date:</b> ${formatPrivateDate(review.dateReviewed)}</p>`:''}<p><b>Nose:</b> ${escapeHtml(review.nose)}</p><p><b>Palate:</b> ${escapeHtml(review.palate)}</p>${review.overall ? `<p><b>Overall:</b> ${escapeHtml(review.overall)}</p>`:''}</article>`).join('') || '<p>No bottle in the cabinet matches that search.</p>';
 }
 
@@ -50,8 +81,12 @@ function renderClubContent() {
   if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => { const note = scheduleNotes.find(item => String(item.theme || '').trim() === String(event.theme || '').trim() && hasPrivateDate(item.date) && privateDate(item.date).toISOString().slice(0,10) === event.date); const noteUrl = safeUrl(note?.url); return `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small><b>Location:</b> ${escapeHtml(event.location)}</small></div><div class="schedule-details"><p><b>Tasting Selection:</b> ${escapeHtml(event.selection)}</p><p><b>Most Popular:</b> ${escapeHtml(event.popular || 'Not recorded')}</p>${noteUrl ? `<p><a class="tasting-notes-link" href="${escapeHtml(noteUrl)}" target="_blank" rel="noopener noreferrer">Open tasting notes →</a></p>` : `<p><b>Notes:</b> ${escapeHtml(event.notes || '—')}</p>`}</div></article>`; }).join('');
   renderThemeIdeas();
   if ($('#rule-list')) $('#rule-list').innerHTML = club.rules.map(rule => `<li>${escapeHtml(rule)}</li>`).join('');
-  if ($('#bottle-search')) $('#bottle-search').oninput = event => renderBottleList(event.target.value);
+  if ($('#bottle-search')) $('#bottle-search').oninput = renderBottleList;
+  if ($('#bottle-reviewer')) $('#bottle-reviewer').onchange = renderBottleList;
+  if ($('#bottle-sort')) $('#bottle-sort').onchange = renderBottleList;
   if ($('#review-date')) $('#review-date').value = new Date().toISOString().slice(0,10);
+  renderBottleFilters();
+  renderLeaderboard();
   renderBottleList();
 }
 
@@ -69,7 +104,7 @@ function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot
     const letters = newsletters ? newsletters.docs.map(item => item.data()).sort((a,b) => privateDate(b.date)-privateDate(a.date)) : [];
     $('#newsletter-list').innerHTML = letters.length ? letters.map(letter => { const url=safeUrl(letter.url); return url ? `<a class="newsletter-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(letter.title)}<span>${formatPrivateDate(letter.date)} →</span></a>` : `<div class="newsletter-link">${escapeHtml(letter.title)}<span>${formatPrivateDate(letter.date)}</span></div>`; }).join('') : '<p class="loading">No newsletters yet.</p>';
   }
-  if (reviewSnapshot) { submittedReviews = reviewSnapshot.docs.map(item => ({...item.data(), reviewer:item.data().reviewer || 'Club member'})).sort((a,b) => privateDate(b.dateReviewed)-privateDate(a.dateReviewed)); renderBottleList($('#bottle-search')?.value || ''); }
+  if (reviewSnapshot) { submittedReviews = reviewSnapshot.docs.map(item => ({...item.data(), reviewer:item.data().reviewer || 'Club member'})).sort((a,b) => privateDate(b.dateReviewed)-privateDate(a.dateReviewed)); renderBottleFilters(); renderLeaderboard(); renderBottleList(); }
   if (themeSnapshot) {
     submittedThemes = themeSnapshot.docs.map(item => item.data()).sort((a,b) => String(a.theme || '').localeCompare(String(b.theme || '')));
     renderThemeIdeas();
