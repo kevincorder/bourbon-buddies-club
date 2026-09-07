@@ -63,7 +63,7 @@ function renderReviewers(people) {
 
 function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot, scheduleSnapshot) {
   const people = directory ? directory.docs.map(item => item.data()).sort((a,b) => String(a.name).localeCompare(String(b.name))) : [];
-  if ($('#directory-list')) $('#directory-list').innerHTML = people.length ? people.map(person => `<article class="member-card"><strong>${escapeHtml(person.name)}</strong><p>${escapeHtml(person.title)}</p><p>${escapeHtml(person.phone)}<br><a href="mailto:${escapeHtml(person.email)}">${escapeHtml(person.email)}</a></p></article>`).join('') : '<p class="loading">No directory entries yet.</p>';
+  if ($('#directory-list')) $('#directory-list').innerHTML = people.length ? people.map(person => `<article class="member-card"><strong>${escapeHtml(person.name)}</strong><p>${escapeHtml(person.title)}</p>${person.onlyDramsUsername ? `<p><b>OnlyDrams:</b> ${escapeHtml(person.onlyDramsUsername)}</p>` : ''}<p>${escapeHtml(person.phone)}<br><a href="mailto:${escapeHtml(person.email)}">${escapeHtml(person.email)}</a></p></article>`).join('') : '<p class="loading">No directory entries yet.</p>';
   renderReviewers(people);
   if ($('#newsletter-list')) {
     const letters = newsletters ? newsletters.docs.map(item => item.data()).sort((a,b) => privateDate(b.date)-privateDate(a.date)) : [];

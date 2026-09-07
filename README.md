@@ -46,7 +46,7 @@ The site now loads the directory, ledger, and newsletters from Firestore only af
 | Collection | Document ID | Required fields |
 |---|---|---|
 | `members` | Firebase Authentication UID | `active` (boolean), `role` (`admin` or `member`) |
-| `privateDirectory` | Any unique ID | `name`, `title`, `phone`, `email` |
+| `privateDirectory` | Any unique ID | `name`, `title`, `phone`, `email`, `onlyDramsUsername` |
 | `accounting` | Any unique ID | `date` (Firestore Timestamp), `description`, `status`, `member`, `amount` (number), `notes` |
 | `newsletters` | Any unique ID | `date` (Firestore Timestamp), `title`, `url` (HTTPS URL) |
 | `bottleReviews` | Auto-created by the website | `bottle`, `reviewer`, `dateReviewed`, `nose`, `palate`, `score`, `overall`, `authorUid` |

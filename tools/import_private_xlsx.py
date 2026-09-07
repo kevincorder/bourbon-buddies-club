@@ -65,7 +65,7 @@ def directory_documents(sheet):
         email = value(row, fields, "Email")
         documents.append((
             stable_id("member", source_row, email or name),
-            {"name": name, "title": value(row, fields, "Title") or "Member", "phone": value(row, fields, "Phone") or "", "email": email or ""},
+            {"name": name, "title": value(row, fields, "Title") or "Member", "phone": value(row, fields, "Phone") or "", "email": email or "", "onlyDramsUsername": value(row, fields, "Only Drams Username") or ""},
         ))
     return documents
 
