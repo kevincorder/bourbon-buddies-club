@@ -156,6 +156,24 @@ def theme_idea_documents(sheet):
     return documents
 
 
+def schedule_note_documents(sheet):
+    fields = field_map(sheet)
+    notes_index = fields.get("Notes")
+    documents = []
+    for source_row, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+        event_date = utc_datetime(value(row, fields, "Date"))
+        theme = value(row, fields, "Theme")
+        notes_cell = sheet.cell(row=source_row, column=notes_index + 1) if notes_index is not None else None
+        url = clean(notes_cell.hyperlink.target) if notes_cell and notes_cell.hyperlink else None
+        if not event_date or not theme or not url or not url.startswith("https://"):
+            continue
+        documents.append((
+            f"schedule-row-{source_row}",
+            {"date": event_date, "theme": theme, "title": value(row, fields, "Notes") or "Tasting Notes", "url": url},
+        ))
+    return documents
+
+
 def remove_nones(document):
     return {key: value for key, value in document.items() if value is not None}
 
@@ -175,7 +193,7 @@ def main():
         sys.exit(f"Service-account key not found: {args.service_account}")
 
     workbook = load_workbook(args.workbook, data_only=True)
-    required = ("Members", "Accounting", "Newsletters", "Bottle Notes", "Tasting Ideas")
+    required = ("Members", "Accounting", "Newsletters", "Bottle Notes", "Tasting Ideas", "Schedule")
     missing = [name for name in required if name not in workbook.sheetnames]
     if missing:
         sys.exit(f"Workbook is missing required sheets: {', '.join(missing)}")
@@ -186,6 +204,7 @@ def main():
         "newsletters": newsletter_documents(workbook["Newsletters"]),
         "bottleReviews": bottle_review_documents(workbook["Bottle Notes"]),
         "themeIdeas": theme_idea_documents(workbook["Tasting Ideas"]),
+        "scheduleNotes": schedule_note_documents(workbook["Schedule"]),
     }
     print("Import summary (no private values printed):")
     for name, documents in collections.items():

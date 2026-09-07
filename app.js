@@ -15,6 +15,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character =>
 const safeUrl = value => { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; } };
 let submittedReviews = [];
 let submittedThemes = [];
+let scheduleNotes = [];
 let firestoreDatabase = null;
 let signedInUser = null;
 
@@ -46,7 +47,7 @@ function renderClubContent() {
   const schedule = [...club.schedule].sort((a,b) => asDate(a.date)-asDate(b.date));
   const next = schedule.find(event => asDate(event.date) >= new Date()) || schedule.at(-1);
   if ($('#next-date')) { $('#next-date').textContent=dateFormat.format(asDate(next.date)); $('#next-theme').textContent=next.theme; $('#next-location').textContent=next.location; }
-  if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small><b>Location:</b> ${escapeHtml(event.location)}</small></div><div class="schedule-details"><p><b>Tasting Selection:</b> ${escapeHtml(event.selection)}</p><p><b>Most Popular:</b> ${escapeHtml(event.popular || 'Not recorded')}</p><p><b>Notes:</b> ${escapeHtml(event.notes || '—')}</p></div></article>`).join('');
+  if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => { const note = scheduleNotes.find(item => String(item.theme || '').trim() === String(event.theme || '').trim() && hasPrivateDate(item.date) && privateDate(item.date).getTime() === asDate(event.date).getTime()); const noteUrl = safeUrl(note?.url); return `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small><b>Location:</b> ${escapeHtml(event.location)}</small></div><div class="schedule-details"><p><b>Tasting Selection:</b> ${escapeHtml(event.selection)}</p><p><b>Most Popular:</b> ${escapeHtml(event.popular || 'Not recorded')}</p>${noteUrl ? `<p><a class="tasting-notes-link" href="${escapeHtml(noteUrl)}" target="_blank" rel="noopener noreferrer">Open tasting notes →</a></p>` : `<p><b>Notes:</b> ${escapeHtml(event.notes || '—')}</p>`}</div></article>`; }).join('');
   renderThemeIdeas();
   if ($('#rule-list')) $('#rule-list').innerHTML = club.rules.map(rule => `<li>${escapeHtml(rule)}</li>`).join('');
   if ($('#bottle-search')) $('#bottle-search').oninput = event => renderBottleList(event.target.value);
@@ -60,7 +61,7 @@ function renderReviewers(people) {
   select.innerHTML = '<option value="">Choose your name</option>' + people.map(person => `<option value="${escapeHtml(person.name)}">${escapeHtml(person.name)}</option>`).join('');
 }
 
-function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot) {
+function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot, scheduleSnapshot) {
   const people = directory ? directory.docs.map(item => item.data()).sort((a,b) => String(a.name).localeCompare(String(b.name))) : [];
   if ($('#directory-list')) $('#directory-list').innerHTML = people.length ? people.map(person => `<article class="member-card"><strong>${escapeHtml(person.name)}</strong><p>${escapeHtml(person.title)}</p><p>${escapeHtml(person.phone)}<br><a href="mailto:${escapeHtml(person.email)}">${escapeHtml(person.email)}</a></p></article>`).join('') : '<p class="loading">No directory entries yet.</p>';
   renderReviewers(people);
@@ -73,6 +74,7 @@ function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot
     submittedThemes = themeSnapshot.docs.map(item => item.data()).sort((a,b) => String(a.theme || '').localeCompare(String(b.theme || '')));
     renderThemeIdeas();
   }
+  if (scheduleSnapshot) { scheduleNotes = scheduleSnapshot.docs.map(item => item.data()); renderClubContent(); }
 }
 
 async function loadPrivateData() {
@@ -80,15 +82,17 @@ async function loadPrivateData() {
   const needNewsletters = Boolean($('#newsletter-list'));
   const needReviews = Boolean($('#bottle-list'));
   const needThemes = Boolean($('#idea-list'));
-  if (!needDirectory && !needNewsletters && !needReviews && !needThemes) return;
+  const needScheduleNotes = Boolean($('#schedule-list'));
+  if (!needDirectory && !needNewsletters && !needReviews && !needThemes && !needScheduleNotes) return;
   try {
-    const [directory, newsletters, reviews, themes] = await Promise.all([
+    const [directory, newsletters, reviews, themes, notes] = await Promise.all([
       needDirectory ? getDocs(collection(firestoreDatabase,'privateDirectory')) : Promise.resolve(null),
       needNewsletters ? getDocs(collection(firestoreDatabase,'newsletters')) : Promise.resolve(null),
       needReviews ? getDocs(collection(firestoreDatabase,'bottleReviews')) : Promise.resolve(null),
       needThemes ? getDocs(collection(firestoreDatabase,'themeIdeas')) : Promise.resolve(null),
+      needScheduleNotes ? getDocs(collection(firestoreDatabase,'scheduleNotes')) : Promise.resolve(null),
     ]);
-    renderPrivateData(directory, newsletters, reviews, themes);
+    renderPrivateData(directory, newsletters, reviews, themes, notes);
   } catch (error) {
     console.error('Private Firestore load failed:', error);
     const code = escapeHtml(error?.code || 'unknown-error'); const detail = escapeHtml(error?.message || 'No diagnostic message returned.');
