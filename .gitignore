@@ -1,0 +1,4 @@
+# Never commit Firebase Admin credentials or private import artifacts.
+service-account.json
+*.firebase-adminsdk-*.json
+import-report.json

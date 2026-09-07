@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="The members' clubhouse for Bourbon Buddies Club." />
+    <title>Bourbon Buddies Club</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="grain"></div>
+    <main class="shell">
+      <section id="login-view" class="login-card" aria-labelledby="login-title">
+        <p class="eyebrow">Est. May 2024 · no tiny umbrellas</p>
+        <h1 id="login-title">Bourbon<br /><em>Buddies</em> Club</h1>
+        <p class="lead">A respectable gathering of grown men who insist that "oak" is a complete sentence.</p>
+        <form id="login-form">
+          <label>Email<input id="email" type="email" autocomplete="email" required /></label>
+          <label>Password<input id="password" type="password" autocomplete="current-password" required /></label>
+          <button type="submit">Enter the barrel room →</button>
+        </form>
+        <p id="login-message" class="form-message">Club access is configured by the keeper of the keys.</p>
+      </section>
+
+      <section id="club-view" hidden>
+        <header class="site-header">
+          <a class="wordmark" href="#home" aria-label="Bourbon Buddies Club home">BBC<span>🥃</span></a>
+          <nav aria-label="Club sections">
+            <a href="#calendar">Calendar</a><a href="#bottles">Bottle notes</a><a href="#directory">Directory</a><a href="#ledger">Ledger</a><a href="#rules">Rules</a>
+          </nav>
+          <button id="sign-out" class="quiet-button">Sign out</button>
+        </header>
+
+        <section id="home" class="hero">
+          <div>
+            <p class="eyebrow">Members’ clubhouse</p>
+            <h1>Good bottles.<br />Questionable <em>takes.</em></h1>
+            <p class="lead">The official field guide to our every-other-month campaign against bad whiskey.</p>
+            <a class="button-link" href="#calendar">See the next pour</a>
+          </div>
+          <aside class="next-pour"><p class="eyebrow">Next meeting</p><p id="next-date" class="date">—</p><h2 id="next-theme">—</h2><p id="next-location">—</p></aside>
+        </section>
+
+        <section id="calendar" class="content-section">
+          <div class="section-heading"><p class="eyebrow">Meet, taste, repeat</p><h2>Tasting calendar</h2></div>
+          <div id="schedule-list" class="schedule-list"></div>
+        </section>
+
+        <section id="bottles" class="content-section split-section">
+          <div class="section-heading"><p class="eyebrow">The evidence</p><h2>Bottle notes</h2><p>Search the cabinet before you buy the same bottle twice.</p></div>
+          <div><input id="bottle-search" class="search" type="search" placeholder="Search bottles or tasting notes" aria-label="Search bottle notes" /><div id="bottle-list" class="bottle-list"></div></div>
+        </section>
+
+        <section id="ideas" class="content-section">
+          <div class="section-heading"><p class="eyebrow">When the trivia winner speaks</p><h2>Theme ideas</h2></div>
+          <div id="idea-list" class="chip-list"></div>
+        </section>
+
+        <section id="directory" class="content-section private-section">
+          <div class="section-heading"><p class="eyebrow">Members only</p><h2>Club directory</h2><p>Keep this information in the clubhouse.</p></div>
+          <div id="directory-list" class="directory-list"><p class="loading">Loading the directory…</p></div>
+        </section>
+
+        <section id="ledger" class="content-section private-section">
+          <div class="section-heading"><p class="eyebrow">Members only</p><h2>Club ledger</h2><p>Dues and reimbursements. The emotional cost of allocated bourbon remains untracked.</p></div>
+          <div id="ledger-list" class="ledger-list"><p class="loading">Loading the ledger…</p></div>
+        </section>
+
+        <section id="newsletters" class="content-section private-section">
+          <div class="section-heading"><p class="eyebrow">Members only</p><h2>Newsletters</h2></div>
+          <div id="newsletter-list" class="newsletter-list"><p class="loading">Loading newsletters…</p></div>
+        </section>
+
+        <section id="rules" class="content-section rules-section">
+          <div class="section-heading"><p class="eyebrow">The fine print, but friendlier</p><h2>Club rules</h2></div>
+          <ol id="rule-list"></ol>
+        </section>
+
+        <footer>Drink thoughtfully. Hydrate aggressively. Never trust a label that says “ultra smooth.”</footer>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
