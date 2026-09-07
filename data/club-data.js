@@ -13,14 +13,21 @@ export const club = {
     "Club shirts are available for $25; larger sizes may cost more."
   ],
   schedule: [
-    { date:"2026-03-21", location:"Bob’s House", theme:"Wild Turkey Beacon", selection:"Wild Turkey Beacon", winner:"Wild Turkey Beacon" },
-    { date:"2026-05-16", location:"Kevin’s House", theme:"2nd Anniversary Bottle Share", selection:"Everyone brought a $30+ bottle to share and sample" },
-    { date:"2026-07-25", location:"Erik’s House", theme:"Heaven Hill Distillery", selection:"Evan Williams Black Label, Elijah Craig Toasted Rye, Heaven Hill 7 Year, Old Fitzgerald 7 Year BIB, Grain to Glass Wheated" },
-    { date:"2026-10-24", location:"President’s House", theme:"Weller Rainbow", selection:"Special Reserve, 12 Year, Antique 107, Full Proof, CYPB (gifted; no samples)" },
-    { date:"2025-11-15", location:"Giannini’s House", theme:"Wild Turkey Distillery", selection:"Wild Turkey Standard, 101 Rye, Long Branch, Russell’s 10 Year, 101 8 Year, Kentucky Spirit" },
-    { date:"2025-09-06", location:"Barnett’s House", theme:"Easily Obtainable", selection:"Michter’s US*1 Rye, Elijah Craig, Four Roses Single Barrel, Wild Turkey 101, Knob Creek 120 Proof", winner:"Wild Turkey 101" },
-    { date:"2025-07-12", location:"President’s House", theme:"Surprise Wheated", selection:"Penelope Wheated, Weller SR, Green River Wheated, Larceny Barrel Proof, Bardstown Wheated", winner:"Bardstown Wheated" },
-    { date:"2025-05-24", location:"Erik’s House", theme:"California & Nevada Distilleries", selection:"Frey Ranch, Redwood Empire Pipe Dream, Pacific Rails, Corbin Cask Rye, Devil’s Creek", winner:"Frey Ranch" }
+    { date:"2024-05-26", location:"President’s House", theme:"Bottled-in-Bond", selection:"Evan Williams White Label, Early Times, Jack Daniel’s Bonded, 1792", popular:"1792 Small Batch", notes:"" },
+    { date:"2024-07-06", location:"Barnett’s House", theme:"Rye Whiskey", selection:"Redwood Empire Emerald Giant, Bulleit Rye 12 Year, Angel’s Envy Finished Rye", popular:"Angel’s Envy Finished Rye", notes:"" },
+    { date:"2024-08-17", location:"President’s House", theme:"Buffalo Trace Distillery", selection:"Eagle Rare 10 Year, Benchmark Small Batch, E.H. Taylor Small Batch, Weller Special Reserve, Buffalo Trace", popular:"Eagle Rare 10 Year", notes:"Tasting Notes" },
+    { date:"2025-01-10", location:"Nate’s House", theme:"Battle of the Rockies", selection:"High West, Wyoming Small Batch, Smoke Wagon Bourbon, Tin Cup, Catamount", popular:"Wyoming Small Batch", notes:"" },
+    { date:"2025-01-11", location:"Bob’s House", theme:"Jack Daniel’s Distillery", selection:"No. 7, Gentleman Jack, Triple Mash, Single Barrel–Barrel Proof Whiskey, Single Barrel–Barrel Proof Rye", popular:"Single Barrel–Barrel Proof Rye", notes:"" },
+    { date:"2025-03-22", location:"Kevin’s House", theme:"St. Patrick’s Day (Irish Whiskey)", selection:"Jameson Triple Triple, Green Spot, Redbreast 12 Year, Kilbrin, Glendalough", popular:"Jameson Triple Triple", notes:"Tasting Notes" },
+    { date:"2025-05-24", location:"Erik’s House", theme:"California & Nevada Distilleries", selection:"Frey Ranch Straight Bourbon, Redwood Empire Pipe Dream, Pacific Rails Bourbon, Corbin Cask Rye, Devil’s Creek Bourbon", popular:"Frey Ranch Straight Bourbon", notes:"Tasting Notes" },
+    { date:"2025-07-12", location:"President’s House", theme:"Suprise Wheated", selection:"Penelope Wheated, Weller SR, Green River Wheated, Larceny Barrell Proof, Bardstown Wheated", popular:"Bardstown Wheated", notes:"Tasting Notes" },
+    { date:"2025-09-06", location:"Barnett’s House", theme:"Easily obtainable", selection:"Michters US1 Rye, Elijah Craig, Four Roses Single Barell, Wild Turkey 101, Knob Creek 120 Proof", popular:"Wild Turkey 101", notes:"Tasting Notes" },
+    { date:"2025-11-15", location:"Giannini’s House", theme:"Wild Turkey Distillery", selection:"Wild Turkey Standard, 101 Rye, Long Branch, Russel’s 10 Year, 101 8 Year, Kentucky Spirit", popular:"", notes:"Tasting Notes" },
+    { date:"2025-11-29", location:"Nate’s House", theme:"Toasted/Double Oaked", selection:"Sagamore Spirit Rye Double Oak, Bib & Tucker Double Char, Elijah Craig Toasted, Heaven’s Door Revelation", popular:"Sagamore Rye Double Oak", notes:"Tasting Notes" },
+    { date:"2026-03-21", location:"Bob’s House", theme:"Wild Turkey Beacon", selection:"Wild Turkey Beacon", popular:"Wild Turkey Beacon", notes:"" },
+    { date:"2026-05-16", location:"Kevin’s House", theme:"2nd Anniversary Bottle Share", selection:"Everyone brought a >$30 bottle to share and sample", popular:"", notes:"" },
+    { date:"2026-07-25", location:"Erik’s House", theme:"Heaven Hill Distillery", selection:"Evan Williams Black Label, Elijah Craig Toasted Rye, Heaven Hill 7 Year, Old Fitzgerald 7 Year Bottled in Bond, Grain to Glass Wheated.", popular:"", notes:"Tasting Notes" },
+    { date:"2026-10-24", location:"President’s House", theme:"Weller Rainbow", selection:"Special Reserve, 12 Year, Antique 107, Full Proof, CYPB (Gifted, no samples)", popular:"", notes:"" }
   ],
   bottles: [
     { bottle:"George T. Stagg", reviewer:"Bob Caporale", score:93, nose:"Caramel, espresso, burnt oak", palate:"Oak, cherry, chocolate" },

@@ -6,6 +6,7 @@ Run with --apply only after reviewing the summary and Firestore rules.
 
 import argparse
 import hashlib
+import re
 import sys
 from datetime import date, datetime, time, timezone
 from pathlib import Path
@@ -29,6 +30,13 @@ def utc_datetime(value):
         return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
     if isinstance(value, date):
         return datetime.combine(value, time.min, tzinfo=timezone.utc)
+    if isinstance(value, str):
+        normalized = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", value.strip(), flags=re.IGNORECASE)
+        for pattern in ("%B %d, %Y", "%b. %d, %Y", "%b %d, %Y"):
+            try:
+                return datetime.strptime(normalized, pattern).replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
     return None
 
 
@@ -127,6 +135,27 @@ def bottle_review_documents(sheet):
     return documents
 
 
+def theme_idea_documents(sheet):
+    fields = field_map(sheet)
+    documents = []
+    for source_row, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+        theme = value(row, fields, "Theme/topic")
+        if not theme:
+            continue
+        last_used = utc_datetime(value(row, fields, "Last Date Used"))
+        documents.append((
+            stable_id("original-theme", source_row, theme),
+            {
+                "theme": theme,
+                "lastUsed": last_used,
+                "used": last_used is not None,
+                "authorUid": "imported-from-original-xlsx",
+                "createdAt": last_used or datetime.now(timezone.utc),
+            },
+        ))
+    return documents
+
+
 def remove_nones(document):
     return {key: value for key, value in document.items() if value is not None}
 
@@ -146,7 +175,7 @@ def main():
         sys.exit(f"Service-account key not found: {args.service_account}")
 
     workbook = load_workbook(args.workbook, data_only=True)
-    required = ("Members", "Accounting", "Newsletters", "Bottle Notes")
+    required = ("Members", "Accounting", "Newsletters", "Bottle Notes", "Tasting Ideas")
     missing = [name for name in required if name not in workbook.sheetnames]
     if missing:
         sys.exit(f"Workbook is missing required sheets: {', '.join(missing)}")
@@ -156,6 +185,7 @@ def main():
         "accounting": accounting_documents(workbook["Accounting"]),
         "newsletters": newsletter_documents(workbook["Newsletters"]),
         "bottleReviews": bottle_review_documents(workbook["Bottle Notes"]),
+        "themeIdeas": theme_idea_documents(workbook["Tasting Ideas"]),
     }
     print("Import summary (no private values printed):")
     for name, documents in collections.items():

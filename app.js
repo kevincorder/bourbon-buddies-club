@@ -14,6 +14,7 @@ const formatPrivateDate = value => hasPrivateDate(value) ? dateFormat.format(pri
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
 const safeUrl = value => { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; } };
 let submittedReviews = [];
+let submittedThemes = [];
 let firestoreDatabase = null;
 let signedInUser = null;
 
@@ -26,12 +27,27 @@ function renderBottleList(search = '') {
   list.innerHTML = matches.map(review => `<article class="bottle-card"><header><div><strong>${escapeHtml(review.bottle)}</strong><p>Reviewed by ${escapeHtml(review.reviewer)}</p></div><span class="score">${escapeHtml(review.score)}</span></header>${review.dateReviewed ? `<p><b>Date:</b> ${formatPrivateDate(review.dateReviewed)}</p>`:''}<p><b>Nose:</b> ${escapeHtml(review.nose)}</p><p><b>Palate:</b> ${escapeHtml(review.palate)}</p>${review.overall ? `<p><b>Overall:</b> ${escapeHtml(review.overall)}</p>`:''}</article>`).join('') || '<p>No bottle in the cabinet matches that search.</p>';
 }
 
+function renderThemeIdeas() {
+  const list = $('#idea-list');
+  if (!list) return;
+  const seen = new Set();
+  const sourceIdeas = submittedThemes.length ? submittedThemes : club.ideas.map(([theme, used]) => ({ theme, used }));
+  const ideas = sourceIdeas
+    .filter(idea => {
+      const key = String(idea.theme || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  list.innerHTML = ideas.map(idea => `<span class="chip ${idea.used ? 'used' : ''}">${escapeHtml(idea.theme)}${idea.used ? ' · previously poured' : ''}</span>`).join('') || '<p class="loading">No theme ideas yet.</p>';
+}
+
 function renderClubContent() {
   const schedule = [...club.schedule].sort((a,b) => asDate(a.date)-asDate(b.date));
   const next = schedule.find(event => asDate(event.date) >= new Date()) || schedule.at(-1);
   if ($('#next-date')) { $('#next-date').textContent=dateFormat.format(asDate(next.date)); $('#next-theme').textContent=next.theme; $('#next-location').textContent=next.location; }
-  if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small>${escapeHtml(event.location)}${event.winner ? ` · Crowd favorite: ${escapeHtml(event.winner)}`:''}</small></div><p class="selection">${escapeHtml(event.selection)}</p></article>`).join('');
-  if ($('#idea-list')) $('#idea-list').innerHTML = club.ideas.map(([idea,used]) => `<span class="chip ${used?'used':''}">${escapeHtml(idea)}${used?' · previously poured':''}</span>`).join('');
+  if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small><b>Location:</b> ${escapeHtml(event.location)}</small></div><div class="schedule-details"><p><b>Tasting Selection:</b> ${escapeHtml(event.selection)}</p><p><b>Most Popular:</b> ${escapeHtml(event.popular || 'Not recorded')}</p><p><b>Notes:</b> ${escapeHtml(event.notes || '—')}</p></div></article>`).join('');
+  renderThemeIdeas();
   if ($('#rule-list')) $('#rule-list').innerHTML = club.rules.map(rule => `<li>${escapeHtml(rule)}</li>`).join('');
   if ($('#bottle-search')) $('#bottle-search').oninput = event => renderBottleList(event.target.value);
   if ($('#review-date')) $('#review-date').value = new Date().toISOString().slice(0,10);
@@ -44,7 +60,7 @@ function renderReviewers(people) {
   select.innerHTML = '<option value="">Choose your name</option>' + people.map(person => `<option value="${escapeHtml(person.name)}">${escapeHtml(person.name)}</option>`).join('');
 }
 
-function renderPrivateData(directory, newsletters, reviewSnapshot) {
+function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot) {
   const people = directory ? directory.docs.map(item => item.data()).sort((a,b) => String(a.name).localeCompare(String(b.name))) : [];
   if ($('#directory-list')) $('#directory-list').innerHTML = people.length ? people.map(person => `<article class="member-card"><strong>${escapeHtml(person.name)}</strong><p>${escapeHtml(person.title)}</p><p>${escapeHtml(person.phone)}<br><a href="mailto:${escapeHtml(person.email)}">${escapeHtml(person.email)}</a></p></article>`).join('') : '<p class="loading">No directory entries yet.</p>';
   renderReviewers(people);
@@ -53,27 +69,48 @@ function renderPrivateData(directory, newsletters, reviewSnapshot) {
     $('#newsletter-list').innerHTML = letters.length ? letters.map(letter => { const url=safeUrl(letter.url); return url ? `<a class="newsletter-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(letter.title)}<span>${formatPrivateDate(letter.date)} →</span></a>` : `<div class="newsletter-link">${escapeHtml(letter.title)}<span>${formatPrivateDate(letter.date)}</span></div>`; }).join('') : '<p class="loading">No newsletters yet.</p>';
   }
   if (reviewSnapshot) { submittedReviews = reviewSnapshot.docs.map(item => ({...item.data(), reviewer:item.data().reviewer || 'Club member'})).sort((a,b) => privateDate(b.dateReviewed)-privateDate(a.dateReviewed)); renderBottleList($('#bottle-search')?.value || ''); }
+  if (themeSnapshot) {
+    submittedThemes = themeSnapshot.docs.map(item => item.data()).sort((a,b) => String(a.theme || '').localeCompare(String(b.theme || '')));
+    renderThemeIdeas();
+  }
 }
 
 async function loadPrivateData() {
   const needDirectory = Boolean($('#directory-list') || $('#reviewer'));
   const needNewsletters = Boolean($('#newsletter-list'));
   const needReviews = Boolean($('#bottle-list'));
-  if (!needDirectory && !needNewsletters && !needReviews) return;
+  const needThemes = Boolean($('#idea-list'));
+  if (!needDirectory && !needNewsletters && !needReviews && !needThemes) return;
   try {
-    const [directory, newsletters, reviews] = await Promise.all([
+    const [directory, newsletters, reviews, themes] = await Promise.all([
       needDirectory ? getDocs(collection(firestoreDatabase,'privateDirectory')) : Promise.resolve(null),
       needNewsletters ? getDocs(collection(firestoreDatabase,'newsletters')) : Promise.resolve(null),
       needReviews ? getDocs(collection(firestoreDatabase,'bottleReviews')) : Promise.resolve(null),
+      needThemes ? getDocs(collection(firestoreDatabase,'themeIdeas')) : Promise.resolve(null),
     ]);
-    renderPrivateData(directory, newsletters, reviews);
+    renderPrivateData(directory, newsletters, reviews, themes);
   } catch (error) {
     console.error('Private Firestore load failed:', error);
     const code = escapeHtml(error?.code || 'unknown-error'); const detail = escapeHtml(error?.message || 'No diagnostic message returned.');
     const message = `<p class="loading">Private information is unavailable (${code}: ${detail}). Ask the club admin to check the Firestore access rules.</p>`;
-    ['#directory-list','#newsletter-list'].forEach(selector => { if ($(selector)) $(selector).innerHTML = message; });
+    ['#directory-list','#newsletter-list','#idea-list'].forEach(selector => { if ($(selector)) $(selector).innerHTML = message; });
     if ($('#review-message')) $('#review-message').textContent = 'Reviews are unavailable until the Firestore rules for bottleReviews are published.';
+    if ($('#theme-message')) $('#theme-message').textContent = 'Theme ideas are unavailable until the Firestore rules for themeIdeas are published.';
   }
+}
+
+async function submitTheme(event) {
+  event.preventDefault();
+  if (!firestoreDatabase || !signedInUser) return;
+  const form = event.currentTarget; const button = form.querySelector('button[type="submit"]'); const message = $('#theme-message');
+  const theme = $('#theme-name').value.trim();
+  if (!theme) { message.textContent = 'Give the next pour a name first.'; return; }
+  button.disabled = true; message.textContent = 'Adding that idea to the barrel…';
+  try {
+    await addDoc(collection(firestoreDatabase,'themeIdeas'), { theme, authorUid:signedInUser.uid, createdAt:Timestamp.now() });
+    form.reset(); message.textContent = 'Theme idea added. The trivia winner may now take the credit.'; await loadPrivateData();
+  } catch (error) { message.textContent = error?.code === 'permission-denied' ? 'Firestore denied this idea. Ask the club admin to publish the themeIdeas rule.' : 'Could not save the theme idea. Try again.'; }
+  finally { button.disabled = false; }
 }
 
 async function submitReview(event) {
@@ -104,5 +141,6 @@ if (!configured) {
   });
   $('#login-form').addEventListener('submit', async event => { event.preventDefault(); $('#login-message').textContent=''; try { await signInWithEmailAndPassword(auth, $('#email').value, $('#password').value); } catch { $('#login-message').textContent = 'That email/password combination did not work. Try again or ask the club admin.'; } });
   if ($('#review-form')) $('#review-form').addEventListener('submit', submitReview);
+  if ($('#theme-form')) $('#theme-form').addEventListener('submit', submitTheme);
   $('#sign-out').addEventListener('click', () => signOut(auth));
 }
