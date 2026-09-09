@@ -33,6 +33,10 @@ Firebase web configuration values are not secrets. The protection comes from Fir
 4. GitHub displays the free address after a minute or two: `https://YOUR-GITHUB-NAME.github.io/bourbon-buddies-club/`.
 5. Add `YOUR-GITHUB-NAME.github.io` to Firebase Authorized domains, as described above, and test a member account.
 
+## Install on iPhone
+
+After publishing the latest files, open the site in Safari on an iPhone, tap **Share**, then choose **Add to Home Screen**. The installed app opens in its own window and retains the normal Firebase sign-in protection. The offline screen never stores or displays member-only Firestore data.
+
 ## Keep it current
 
 For public club highlights, edit `data/club-data.js`: add a schedule object, bottle object, rule, or theme. Commit and push. GitHub Pages redeploys automatically.

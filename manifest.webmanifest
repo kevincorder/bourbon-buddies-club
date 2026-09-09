@@ -1,0 +1,18 @@
+{
+  "name": "Bourbon Buddies Club",
+  "short_name": "Bourbon Buddies",
+  "description": "The private clubhouse for Bourbon Buddies Club.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5ecda",
+  "theme_color": "#241711",
+  "icons": [
+    {
+      "src": "assets/bbc-logo.jpg",
+      "sizes": "274x274",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
