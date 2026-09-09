@@ -53,6 +53,7 @@ The site now loads the directory, ledger, and newsletters from Firestore only af
 | `themeIdeas` | Imported from the workbook and auto-created by the website | `theme`, `lastUsed` (optional Timestamp), `used` (boolean), `authorUid`, `createdAt` |
 | `scheduleNotes` | Imported from the workbook | `date` (Timestamp), `theme`, `title`, `url` (HTTPS URL) |
 | `tastings` | Imported from the workbook and administered on the Calendar page | `date` (Timestamp), `location`, `theme`, `selection`, `popular`, `notes`, `tastingNotesUrl` (optional HTTPS URL) |
+| `clubStats/current` | Synced privately from Google Sheets | `availableFunds` (number), `updatedAt` (Timestamp), `source` |
 
 Create each user yourself in Firebase Authentication. Copy their UID and create `members/UID` with `active: true`. An authenticated account without that document is immediately signed out by the site; Firestore rules must enforce the same restriction.
 
@@ -122,6 +123,10 @@ service cloud.firestore {
       allow read: if member();
       allow write: if admin();
     }
+    match /clubStats/{statId} {
+      allow read: if member();
+      allow write: if false;
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }
@@ -140,6 +145,15 @@ The Theme Ideas page reads `themeIdeas` from Firestore after sign-in. The one-ti
 ## Schedule tasting-note links
 
 The calendar reads `tastings` from Firestore after sign-in. Club admins see an **Add a meeting** form on the Calendar page; members see the calendar but cannot change it. Each tasting can include an **Open tasting notes** link. Keep linked Google Docs shared only with intended club members; Google Drive sharing controls access to the notes themselves.
+
+## Live club funds from Google Sheets
+
+The homepage shows `clubStats/current.availableFunds` only after a member signs in. The included Apps Script reads the calculated `=SUM(Budget[Amount])` total from the private **Accounting** tab and writes only that total to Firestore—never the spreadsheet or Google credentials.
+
+1. In the shared Google Sheet, open **Extensions → Apps Script**. Replace `Code.gs` with `tools/google_sheets_funds_sync.gs`. In **Project Settings**, enable the `appsscript.json` manifest and replace it with `tools/appsscript.json`.
+2. The Google account running the script must have permission to write to this Firebase project (Firebase project Owner is sufficient). Run `syncClubFunds` once and approve the requested Google permissions. Confirm `clubStats/current` appears in Firestore with `availableFunds`.
+3. Run `installTriggers` once. It creates an installable edit trigger and an hourly backup sync. The Google Sheet remains private.
+4. Publish the Firestore rules above and the website files. The Next Meeting card will show the balance after the first successful sync.
 
 ## One-time XLSX import
 

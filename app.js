@@ -7,6 +7,7 @@ const firebaseConfig = { apiKey:'AIzaSyDx55W3kB4b9wSzctS-BiPjyDbx1141LGo', authD
 const configured = !Object.values(firebaseConfig).some(value => value.includes('PASTE_'));
 const $ = selector => document.querySelector(selector);
 const dateFormat = new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+const currencyFormat = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
 const asDate = value => new Date(`${value}T12:00:00Z`);
 const privateDate = value => value?.toDate ? value.toDate() : new Date(`${value}T12:00:00Z`);
 const hasPrivateDate = value => !Number.isNaN(privateDate(value).getTime());
@@ -17,6 +18,7 @@ let submittedReviews = [];
 let submittedThemes = [];
 let scheduleNotes = [];
 let firestoreSchedule = [];
+let clubFunds = null;
 let firestoreDatabase = null;
 let signedInUser = null;
 let signedInAdmin = false;
@@ -80,6 +82,7 @@ function renderClubContent() {
   const schedule = [...(firestoreSchedule.length ? firestoreSchedule : club.schedule)].sort((a,b) => asDate(a.date)-asDate(b.date));
   const next = schedule.find(event => asDate(event.date) >= new Date()) || schedule.at(-1);
   if ($('#next-date')) { $('#next-date').textContent=dateFormat.format(asDate(next.date)); $('#next-theme').textContent=next.theme; $('#next-location').textContent=next.location; }
+  if ($('#club-funds')) $('#club-funds').textContent = clubFunds === null ? 'Loading…' : Number.isFinite(clubFunds) ? currencyFormat.format(clubFunds) : 'Not synced yet';
   if ($('#schedule-list')) $('#schedule-list').innerHTML = [...schedule].reverse().map(event => { const note = scheduleNotes.find(item => String(item.theme || '').trim() === String(event.theme || '').trim() && hasPrivateDate(item.date) && privateDate(item.date).toISOString().slice(0,10) === event.date); const noteUrl = safeUrl(event.tastingNotesUrl || note?.url); return `<article class="schedule-item ${event === next ? 'upcoming':''}"><time class="schedule-date">${dateFormat.format(asDate(event.date))}</time><div><strong>${escapeHtml(event.theme)}</strong><small><b>Location:</b> ${escapeHtml(event.location)}</small></div><div class="schedule-details"><p><b>Tasting Selection:</b> ${escapeHtml(event.selection)}</p><p><b>Most Popular:</b> ${escapeHtml(event.popular || 'Not recorded')}</p>${noteUrl ? `<p><a class="tasting-notes-link" href="${escapeHtml(noteUrl)}" target="_blank" rel="noopener noreferrer">Open tasting notes →</a></p>` : `<p><b>Notes:</b> ${escapeHtml(event.notes || '—')}</p>`}</div></article>`; }).join('');
   renderThemeIdeas();
   if ($('#rule-list')) $('#rule-list').innerHTML = club.rules.map(rule => `<li>${escapeHtml(rule)}</li>`).join('');
@@ -98,7 +101,7 @@ function renderReviewers(people) {
   select.innerHTML = '<option value="">Choose your name</option>' + people.map(person => `<option value="${escapeHtml(person.name)}">${escapeHtml(person.name)}</option>`).join('');
 }
 
-function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot, scheduleSnapshot, tastingSnapshot) {
+function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot, scheduleSnapshot, tastingSnapshot, fundsSnapshot) {
   const people = directory ? directory.docs.map(item => item.data()).sort((a,b) => String(a.name).localeCompare(String(b.name))) : [];
   if ($('#directory-list')) $('#directory-list').innerHTML = people.length ? people.map(person => `<article class="member-card"><strong>${escapeHtml(person.name)}</strong><p>${escapeHtml(person.title)}</p>${person.onlyDramsUsername ? `<p><b>OnlyDrams:</b> ${escapeHtml(person.onlyDramsUsername)}</p>` : ''}<p>${escapeHtml(person.phone)}<br><a href="mailto:${escapeHtml(person.email)}">${escapeHtml(person.email)}</a></p></article>`).join('') : '<p class="loading">No directory entries yet.</p>';
   renderReviewers(people);
@@ -116,6 +119,7 @@ function renderPrivateData(directory, newsletters, reviewSnapshot, themeSnapshot
     firestoreSchedule = tastingSnapshot.docs.map(item => { const tasting = item.data(); return {...tasting, date:hasPrivateDate(tasting.date) ? privateDate(tasting.date).toISOString().slice(0,10) : tasting.date}; });
     renderClubContent();
   }
+  if (fundsSnapshot) { clubFunds = fundsSnapshot.exists() ? Number(fundsSnapshot.data().availableFunds) : undefined; renderClubContent(); }
 }
 
 async function loadPrivateData() {
@@ -125,17 +129,19 @@ async function loadPrivateData() {
   const needThemes = Boolean($('#idea-list'));
   const needScheduleNotes = Boolean($('#schedule-list'));
   const needTastings = Boolean($('#next-date') || $('#schedule-list'));
-  if (!needDirectory && !needNewsletters && !needReviews && !needThemes && !needScheduleNotes && !needTastings) return;
+  const needFunds = Boolean($('#club-funds'));
+  if (!needDirectory && !needNewsletters && !needReviews && !needThemes && !needScheduleNotes && !needTastings && !needFunds) return;
   try {
-    const [directory, newsletters, reviews, themes, notes, tastings] = await Promise.all([
+    const [directory, newsletters, reviews, themes, notes, tastings, funds] = await Promise.all([
       needDirectory ? getDocs(collection(firestoreDatabase,'privateDirectory')) : Promise.resolve(null),
       needNewsletters ? getDocs(collection(firestoreDatabase,'newsletters')) : Promise.resolve(null),
       needReviews ? getDocs(collection(firestoreDatabase,'bottleReviews')) : Promise.resolve(null),
       needThemes ? getDocs(collection(firestoreDatabase,'themeIdeas')) : Promise.resolve(null),
       needScheduleNotes ? getDocs(collection(firestoreDatabase,'scheduleNotes')) : Promise.resolve(null),
       needTastings ? getDocs(collection(firestoreDatabase,'tastings')) : Promise.resolve(null),
+      needFunds ? getDoc(doc(firestoreDatabase,'clubStats','current')) : Promise.resolve(null),
     ]);
-    renderPrivateData(directory, newsletters, reviews, themes, notes, tastings);
+    renderPrivateData(directory, newsletters, reviews, themes, notes, tastings, funds);
   } catch (error) {
     console.error('Private Firestore load failed:', error);
     const code = escapeHtml(error?.code || 'unknown-error'); const detail = escapeHtml(error?.message || 'No diagnostic message returned.');
